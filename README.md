@@ -1,19 +1,70 @@
 # ProxyWiFi
 
-Per-Wi-Fi transparent proxy for Linux: connect to a Wi-Fi network, and the
-proxy configured for *that* connection is applied below the application layer —
-no `HTTP_PROXY`, no browser settings, no per-application configuration.
+**Per-Wi-Fi transparent proxy for Linux.** Attach a proxy to a Wi-Fi connection
+once; whenever you join that network, every app and terminal goes through it —
+no `HTTP_PROXY`, no browser settings, no per-app configuration.
 
 ```text
-My Hotspot  →  NetworkManager  →  ProxyWiFi daemon  →  nftables / TUN  →  SOCKS5  →  Internet
+Hotspot -> NetworkManager -> ProxyWiFi daemon -> nftables + TUN -> SOCKS5 / HTTP proxy -> Internet
 ```
 
-The design principle: **proxy configuration belongs to the network connection,
-while applications stay unaware of it.**
+Design principle: **proxy configuration belongs to the network connection, not
+to the application.**
+
+## Features
+
+- Per-connection proxy profiles (SOCKS5 or HTTP CONNECT), keyed by NetworkManager connection UUID
+- Auto-start on connect, auto-stop on disconnect; manual Stop sticks until the connection changes
+- Transparent: `tun2socks` on a `pwtun0` TUN device, split default routes (`0.0.0.0/1`, `128.0.0.0/1`)
+- Kill switch (nftables) — no leak if the engine dies
+- Proxied DNS (DNS-over-TCP through the proxy), IPv6 leak guard, UDP `proxy` / `block` / `direct` modes
+- Local-network bypass
+- GTK4 / libadwaita GUI (Wi-Fi list sorted by signal, connect, edit proxy, start/stop)
+- Panel tray icon (StatusNotifier / AppIndicator) with start/stop toggle
+- CLI and a D-Bus API (`org.proxywifi.Daemon`, system bus)
+- Proxy passwords stored via the system secret service, not in the profile file
+
+## Requirements
+
+Linux with NetworkManager, systemd, `nftables`, `iproute2`, and
+[`tun2socks`](https://github.com/xjasonlyu/tun2socks) in `PATH`. Rust (stable)
+to build; `libgtk-4-dev` and `libadwaita-1-dev` for the GUI; Python 3 with
+`gir1.2-ayatanaappindicator3-0.1` for the tray.
+
+## Install
+
+```bash
+cargo build --release --workspace
+sudo bash packaging/install.sh
+```
+
+The script installs the binaries, desktop/autostart entries, D-Bus policy and
+systemd unit, creates the `proxywifi` group (adds you to it) and starts the
+daemon. Log out and in once for the group to apply. Details:
+[`packaging/README.md`](packaging/README.md).
+
+## Usage
+
+```bash
+proxywifi status
+proxywifi profiles add <connection-uuid> --host 10.0.0.1 --port 1080 --type socks5 --auto-connect
+proxywifi-gui          # or click the tray icon
+```
+
+With `--type http` use an HTTP proxy that supports `CONNECT`; set `--udp block`
+(HTTP proxies cannot relay UDP).
+
+## Known limitations
+
+- Do not run alongside another TUN tool using `198.18.0.0/15` (e.g. Clash Verge TUN / Mihomo) — the ranges conflict.
+- UDP relay and QUIC are untested (need a SOCKS5 proxy with UDP support).
+- The hardened systemd unit has had limited real-world testing.
+
+## Docs
 
 - Product and architecture spec: [`plan.md`](plan.md)
-- Build / test / hack on it: [`docs/DEVELOPING.md`](docs/DEVELOPING.md)
-- Install as a system service: [`packaging/README.md`](packaging/README.md)
+- Build / test / hack: [`docs/DEVELOPING.md`](docs/DEVELOPING.md)
+- Packaging: [`packaging/README.md`](packaging/README.md)
 
 ## Workspace
 
@@ -22,6 +73,7 @@ while applications stay unaware of it.**
 | `proxywifi-core` | — | Models, NetworkManager client, profile store, secrets, config paths |
 | `proxywifi-daemon` | `proxywifi-daemon` | Privileged daemon: polls NetworkManager, drives the proxy state machine, serves `org.proxywifi.Daemon` |
 | `proxywifi-cli` | `proxywifi` | Shows Wi-Fi/proxy state and manages per-connection profiles |
+| `proxywifi-gui` | `proxywifi-gui` | GTK4/libadwaita front end |
 
 ## Quick start
 
@@ -66,4 +118,4 @@ Phase 5 (UDP and IPv6), each covered by an end-to-end namespace test:
 
 QUIC/HTTP3 itself is untested: it needs a real proxy with a UDP relay.
 
-Not done yet: GUI (Phase 7).
+Phase 7 (GUI and tray) is implemented.
