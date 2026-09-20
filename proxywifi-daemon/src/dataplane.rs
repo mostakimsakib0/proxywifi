@@ -32,8 +32,16 @@ pub const TUN_NAME: &str = "pwtun0";
 /// Table that holds every rule ProxyWiFi owns.
 const TABLE: &str = "inet proxywifi";
 
-/// Address of the tunnel; the DNS forwarder listens here.
-const TUN_ADDR: &str = "198.18.0.1";
+/// Address of the tunnel; the DNS forwarder listens here. Override with
+/// `PROXYWIFI_TUN_ADDR` (IPv4) when another tool, e.g. Clash TUN, owns 198.18/15.
+const DEFAULT_TUN_ADDR: &str = "198.18.0.1";
+
+fn tun_addr() -> String {
+    match std::env::var("PROXYWIFI_TUN_ADDR") {
+        Ok(a) if a.parse::<std::net::Ipv4Addr>().is_ok() => a,
+        _ => DEFAULT_TUN_ADDR.to_string(),
+    }
+}
 /// Port of the DNS forwarder. Not 53: something on the host may already hold
 /// `*:53`, and the nftables redirect works with any port.
 const DNS_PORT: u16 = 5335;
@@ -115,11 +123,12 @@ pub fn render_ruleset(p: &RulesetParams) -> anyhow::Result<String> {
         // Lease renewal must keep working (DHCPv4 / DHCPv6 clients).
         format!(r#"oifname "{iface}" udp dport {{ 67, 547 }} accept"#),
     ];
+    let tun_addr = tun_addr();
     if p.dns_proxied {
         // Redirected DNS must reach the forwarder even when other UDP is
         // rejected below.
         r.push(format!(
-            r#"ip daddr {TUN_ADDR} udp dport {DNS_PORT} accept"#
+            r#"ip daddr {tun_addr} udp dport {DNS_PORT} accept"#
         ));
     }
     match p.udp {
@@ -210,7 +219,7 @@ pub fn render_ruleset(p: &RulesetParams) -> anyhow::Result<String> {
     let nat = if p.dns_proxied {
         format!(
             "    chain dns {{\n        type nat hook output priority -100; policy accept;\n        \
-             oifname != \"lo\" meta nfproto ipv4 udp dport 53 dnat ip to {TUN_ADDR}:{DNS_PORT}\n    }}\n"
+             oifname != \"lo\" meta nfproto ipv4 udp dport 53 dnat ip to {tun_addr}:{DNS_PORT}\n    }}\n"
         )
     } else {
         String::new()
@@ -392,7 +401,8 @@ impl TunEngine {
             anyhow::bail!("tun2socks did not create {TUN_NAME}");
         }
 
-        self.ip(&["addr", "add", "198.18.0.1/15", "dev", TUN_NAME])?;
+        let tun_addr = tun_addr();
+        self.ip(&["addr", "add", &format!("{tun_addr}/30"), "dev", TUN_NAME])?;
         self.ip(&["link", "set", TUN_NAME, "up"])?;
         self.ip(&["route", "add", "0.0.0.0/1", "dev", TUN_NAME])?;
         self.ip(&["route", "add", "128.0.0.0/1", "dev", TUN_NAME])?;
@@ -424,8 +434,8 @@ impl TunEngine {
 
         if profile.dns == DnsMode::Proxied {
             // Bind now (the address exists), serve on the runtime.
-            let sock = std::net::UdpSocket::bind((TUN_ADDR, DNS_PORT)).map_err(|e| {
-                anyhow::anyhow!("cannot bind the DNS forwarder on {TUN_ADDR}:{DNS_PORT}: {e}")
+            let sock = std::net::UdpSocket::bind((tun_addr.as_str(), DNS_PORT)).map_err(|e| {
+                anyhow::anyhow!("cannot bind the DNS forwarder on {tun_addr}:{DNS_PORT}: {e}")
             })?;
             let upstreams = crate::dns::UPSTREAMS
                 .iter()
@@ -493,7 +503,7 @@ impl ProxyEngine for TunEngine {
         };
         if profile.dns == DnsMode::Proxied && self.is_running() {
             // Resolve through the forwarder, i.e. through the proxy.
-            let via_forwarder = SocketAddr::new(TUN_ADDR.parse()?, DNS_PORT);
+            let via_forwarder = SocketAddr::new(tun_addr().parse()?, DNS_PORT);
             result.dns_ok = crate::dns::probe(via_forwarder, "example.com");
             if !result.dns_ok && result.error.is_none() {
                 result.error = Some("DNS through the tunnel failed".into());

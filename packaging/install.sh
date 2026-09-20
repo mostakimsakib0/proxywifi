@@ -4,7 +4,14 @@
 set -euo pipefail
 [ "$EUID" -eq 0 ] || { echo "run with sudo"; exit 1; }
 U=${SUDO_USER:?run via sudo}
-command -v tun2socks >/dev/null || { echo "tun2socks not found in PATH"; exit 1; }
+if ! command -v tun2socks >/dev/null; then
+  case $(uname -m) in x86_64) A=amd64;; aarch64) A=arm64;; *) echo "install tun2socks manually"; exit 1;; esac
+  echo "tun2socks not found, downloading the official release ($A)"
+  T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
+  curl -fsSL -o "$T/t.zip" "https://github.com/xjasonlyu/tun2socks/releases/latest/download/tun2socks-linux-$A.zip"
+  (cd "$T" && python3 -m zipfile -e t.zip .)
+  install -Dm755 "$T/tun2socks-linux-$A" /usr/local/bin/tun2socks
+fi
 
 install -Dm755 target/release/proxywifi-daemon /usr/bin/proxywifi-daemon
 install -Dm755 target/release/proxywifi        /usr/bin/proxywifi

@@ -27,7 +27,7 @@ to the application.**
 ## Requirements
 
 Linux with NetworkManager, systemd, `nftables`, `iproute2`, and
-[`tun2socks`](https://github.com/xjasonlyu/tun2socks) in `PATH`. Rust (stable)
+[`tun2socks`](https://github.com/xjasonlyu/tun2socks) in `PATH` (`install.sh` downloads it if missing). Rust (stable)
 to build; `libgtk-4-dev` and `libadwaita-1-dev` for the GUI; Python 3 with
 `gir1.2-ayatanaappindicator3-0.1` for the tray.
 
@@ -56,8 +56,8 @@ With `--type http` use an HTTP proxy that supports `CONNECT`; set `--udp block`
 
 ## Known limitations
 
-- Do not run alongside another TUN tool using `198.18.0.0/15` (e.g. Clash Verge TUN / Mihomo) — the ranges conflict.
-- UDP relay and QUIC are untested (need a SOCKS5 proxy with UDP support).
+- Another TUN tool (Clash Verge / Mihomo) also claims `198.18.0.0/15`. Set `PROXYWIFI_TUN_ADDR=<free IPv4>` for the daemon (e.g. `Environment=PROXYWIFI_TUN_ADDR=10.77.0.1` in the systemd unit) to move ProxyWiFi's tunnel address. Untested on a live system next to Clash; the two still both capture default traffic, so run only one at a time.
+- UDP relay is covered by a namespace test against a local SOCKS5 relay; QUIC against a real proxy is untested.
 - The hardened systemd unit has had limited real-world testing.
 
 ## Docs
