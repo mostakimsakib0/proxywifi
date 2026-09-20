@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Panel icon for ProxyWiFi: shows the proxy state, toggles it, opens the GUI."""
-import json, subprocess
+import json, os, shutil, subprocess
 import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version("AyatanaAppIndicator3", "0.1")
@@ -67,7 +67,15 @@ def on_toggle(_):
 
 
 toggle.connect("activate", on_toggle)
-gui.connect("activate", lambda _: subprocess.Popen(["proxywifi-gui"]))
+def open_gui(_):
+    # installed binary first, then the source tree's release build
+    dev = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "target", "release", "proxywifi-gui")
+    exe = shutil.which("proxywifi-gui") or (dev if os.path.exists(dev) else None)
+    if exe:
+        subprocess.Popen([exe], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+gui.connect("activate", open_gui)
 quit_.connect("activate", lambda _: Gtk.main_quit())
 refresh()
 GLib.timeout_add_seconds(3, refresh)

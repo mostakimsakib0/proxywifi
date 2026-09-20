@@ -11,3 +11,4 @@
 # Local experiment leftovers
 /tmp/
 *.rs.bk
+__pycache__/
