@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=ProxyWiFi
+Comment=Per-Wi-Fi transparent proxy
+Exec=/usr/bin/proxywifi-gui
+Icon=network-vpn-symbolic
+Categories=Network;Settings;

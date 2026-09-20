@@ -1,0 +1,37 @@
+[workspace]
+members = [
+    "proxywifi-core",
+    "proxywifi-cli",
+    "proxywifi-daemon",
+    "proxywifi-gui",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/mostakimsakib0/NetGuardian"
+authors = ["ProxyWiFi Contributors"]
+description = "ProxyWiFi — Per-Wi-Fi transparent proxy for Linux"
+
+[workspace.dependencies]
+proxywifi-core = { path = "proxywifi-core" }
+
+# ---- Common dependencies used across workspace crates ----
+anyhow = "1"
+thiserror = "2"
+clap = { version = "4", features = ["derive"] }
+comfy-table = "7"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-appender = "0.2"
+dirs = "6"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true

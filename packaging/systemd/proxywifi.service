@@ -1,0 +1,66 @@
+[Unit]
+Description=ProxyWiFi — per-network transparent proxy daemon
+Documentation=file:/usr/share/doc/proxywifi/DEVELOPING.md
+# NetworkManager owns the connection state we follow; without it the daemon
+# refuses to start (it needs the system bus to read Wi-Fi state).
+Wants=network-online.target NetworkManager.service
+After=network-online.target NetworkManager.service
+StartLimitIntervalSec=60
+StartLimitBurst=20
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/proxywifi-daemon
+
+# SIGTERM is handled in-process: the polling loop stops and cleanup restores
+# routing/firewall state before exiting (see DaemonService::run).
+KillSignal=SIGTERM
+TimeoutStopSec=20
+
+Restart=on-failure
+RestartSec=3
+
+# --- Runtime state ---------------------------------------------------------
+# /run/proxywifi: sockets/pids and (with PROXYWIFI_LOG_DESTINATION=file)
+# the rotating logs. StateDirectory keeps anything that must survive a reboot.
+RuntimeDirectory=proxywifi
+RuntimeDirectoryMode=0750
+StateDirectory=proxywifi
+StateDirectoryMode=0750
+Environment=PROXYWIFI_RUN_DIR=/run/proxywifi
+# Profiles and secrets live in the StateDirectory (/var/lib/proxywifi), the
+# only persistent path ProtectSystem=strict leaves writable.
+Environment=XDG_CONFIG_HOME=/var/lib
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=RUST_LOG=info
+
+# --- Privileges ------------------------------------------------------------
+# The daemon is root-only: D-Bus policy restricts who may talk to it. The
+# capability set is limited to what transparent routing needs.
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW
+# TODO(phase 3): the loop-prevention path creates a service user; if the proxy
+# engine is ever split into its own unit, drop these and add User=/Group=.
+
+# --- Hardening -------------------------------------------------------------
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+NoNewPrivileges=yes
+ProtectClock=yes
+ProtectControlGroups=yes
+ProtectHome=read-only
+ProtectKernelModules=yes
+# ProtectKernelTunables=yes is intentionally NOT set: Phase 3 routing needs to
+# write net.ipv4.ip_forward / net.ipv6.conf.* via sysctl. Re-add it once the
+# daemon writes those values through a privileged helper instead.
+ProtectSystem=strict
+ReadWritePaths=/run/proxywifi
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+RestrictNamespaces=yes
+RestrictRealtime=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+# PrivateDevices=yes must stay off: creating the TUN device requires /dev/net/tun.
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=ProxyWiFi Tray
+Comment=Panel icon for ProxyWiFi
+Exec=/usr/bin/proxywifi-tray
+Icon=network-vpn-symbolic
+X-GNOME-Autostart-enabled=true

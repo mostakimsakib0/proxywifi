@@ -1,0 +1,13 @@
+# Rust build output
+/target/
+
+# Editor / OS noise
+*.swp
+*.swo
+.DS_Store
+.vscode/
+.idea/
+
+# Local experiment leftovers
+/tmp/
+*.rs.bk

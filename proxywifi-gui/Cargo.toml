@@ -1,0 +1,20 @@
+[package]
+name = "proxywifi-gui"
+version.workspace = true
+edition = "2021"
+license.workspace = true
+description = "ProxyWiFi GTK4/libadwaita front-end"
+
+[[bin]]
+name = "proxywifi-gui"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+zbus = { version = "4", features = ["tokio"] }
+gtk4 = { version = "0.9", features = ["v4_14"] }
+libadwaita = { version = "0.7", features = ["v1_5"] }
+proxywifi-core.path = "../proxywifi-core"
