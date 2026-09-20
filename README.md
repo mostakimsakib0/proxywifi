@@ -5,7 +5,7 @@ once; whenever you join that network, every app and terminal goes through it —
 no `HTTP_PROXY`, no browser settings, no per-app configuration.
 
 ```text
-Hotspot -> NetworkManager -> ProxyWiFi daemon -> nftables + TUN -> SOCKS5 / HTTP proxy -> Internet
+Any Wi-Fi network -> NetworkManager -> ProxyWiFi daemon -> nftables + TUN -> SOCKS5 / HTTP proxy -> Internet
 ```
 
 Design principle: **proxy configuration belongs to the network connection, not
