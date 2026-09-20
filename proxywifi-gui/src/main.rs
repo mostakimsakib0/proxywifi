@@ -105,6 +105,7 @@ async fn wifi_lists() -> Lists {
         return (Err("NetworkManager unavailable".into()), Ok(Vec::new()));
     };
     let saved = nm.saved_wifi_connections().await.map_err(|e| e.to_string());
+    nm.request_wifi_scan().await;
     let near = nm
         .available_wifi_networks()
         .await

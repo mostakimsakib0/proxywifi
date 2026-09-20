@@ -142,6 +142,7 @@ trait Device {
 )]
 trait Wireless {
     fn get_access_points(&self) -> zbus::Result<Vec<OwnedObjectPath>>;
+    fn request_scan(&self, options: std::collections::HashMap<&str, zbus::zvariant::Value<'_>>) -> zbus::Result<()>;
 
     #[zbus(property)]
     fn active_access_point(&self) -> zbus::Result<OwnedObjectPath>;
@@ -671,6 +672,15 @@ impl NmClient {
         // Stable ordering makes CLI output and tests deterministic.
         out.sort_by(|a, b| a.name.cmp(&b.name));
         Ok(out)
+    }
+
+    /// Ask NetworkManager to rescan; best effort (it throttles and may refuse).
+    pub async fn request_wifi_scan(&self) {
+        for (path, _) in self.wifi_devices().await.unwrap_or_default() {
+            if let Ok(w) = self.wireless(&path).await {
+                let _ = w.request_scan(Default::default()).await;
+            }
+        }
     }
 
     /// Visible access points as `(ssid, signal_strength_percent)`, strongest
