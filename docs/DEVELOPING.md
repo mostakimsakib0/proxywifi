@@ -1,7 +1,7 @@
 # Developing ProxyWiFi
 
-ProxyWiFi is a Rust workspace. `plan.md` is the product/architecture spec; this
-file is the practical "how do I build, run and test it" companion.
+ProxyWiFi is a Rust workspace. This file is the practical "how do I build, run
+and test it" guide.
 
 ## Workspace layout
 

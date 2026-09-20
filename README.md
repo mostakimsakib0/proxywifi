@@ -62,7 +62,6 @@ With `--type http` use an HTTP proxy that supports `CONNECT`; set `--udp block`
 
 ## Docs
 
-- Product and architecture spec: [`plan.md`](plan.md)
 - Build / test / hack: [`docs/DEVELOPING.md`](docs/DEVELOPING.md)
 - Packaging: [`packaging/README.md`](packaging/README.md)
 
